@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Link Unlock System</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src='//libtl.com/sdk.js' data-zone='9955574' data-sdk='show_9955574'></script>
+    <script src="https://ad.gigapub.tech/script?id=6234"></script>
+    
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { background: #0f0f1a; min-height: 100vh; }
+        .link-card { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid #2a2a4a; transition: all 0.2s ease; }
+        .link-card:active { transform: scale(0.98); }
+        .modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .action-btn { transition: all 0.15s ease; }
+        .action-btn:active { transform: scale(0.96); }
+        .scrollable::-webkit-scrollbar { display: none; }
+        .scrollable { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .auth-container { max-width: 400px; margin: 0 auto; padding: 24px 16px; }
+        .auth-input { width: 100%; padding: 16px; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; color: white; font-size: 16px; margin-bottom: 16px; }
+        .auth-input:focus { outline: none; border-color: #3b82f6; }
+        .auth-btn { width: 100%; padding: 16px; background: #3b82f6; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 16px; transition: background 0.2s; }
+        .auth-btn:hover { background: #2563eb; }
+        .auth-btn-google { width: 100%; padding: 14px; background: white; color: #333; border: 1px solid #ddd; border-radius: 12px; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: background 0.2s; }
+        .auth-btn-google:hover { background: #f5f5f5; }
+        .auth-link { color: #3b82f6; text-decoration: none; font-weight: 500; }
+        .auth-link:hover { text-decoration: underline; }
+        
+        .bottom-nav-item { transition: all 0.2s ease; }
+        .bottom-nav-item:active { background: rgba(59, 130, 246, 0.2); }
+        .bottom-nav-item.active { color: #3b82f6; }
+        .bottom-nav-item.active i { color: #3b82f6; }
+        
+        .premium-card { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid #2a2a4a; border-radius: 16px; }
+        .premium-card-gold { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid #f59e0b; border-radius: 16px; }
+        
+        .cat-btn-premium { background: linear-gradient(135deg, #1e3a5f 0%, #1a1a2e 100%); border: 1px solid #3b82f6; transition: all 0.2s ease; }
+        .cat-btn-premium.active { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); border-color: #3b82f6; }
+        .cat-btn-premium:active { transform: scale(0.96); }
+        
+        /* 🔥 FIXED: Smart thumbnail */
+        .link-thumbnail { width: 100%; height: auto; max-height: 220px; min-height: 160px; object-fit: contain; background: #0a0a15; }
+        
+        /* 🔥 FIXED: Action buttons */
+        .action-row-btn { padding: 10px 12px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 10px; cursor: pointer; transition: all 0.15s ease; }
+        .action-row-btn:active { transform: scale(0.95); }
+        
+        /* 🔥 Post thumbnail grid */
+        .post-thumb { width: 100%; aspect-ratio: 16/10; object-fit: cover; border-radius: 8px; background: #1a1a2e; }
+        
+        @media (min-width: 768px) { .max-w-md { max-width: 900px !important; } .link-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; } }
+    </style>
+</head>
+<body class="text-white">
+    
+    <div class="max-w-md mx-auto min-h-screen pb-20">
+        
+        <!-- Header -->
+        <header class="sticky top-0 z-30 bg-[#0f0f1a]/95 backdrop-blur-md border-b border-gray-800 px-4 py-4">
+            <div class="flex items-center gap-3">
+                <img id="siteLogoImg" src="https://telegram.org/img/t_logo.png" class="w-10 h-10 rounded-full">
+                <div class="flex-1">
+                    <h1 id="siteNameDisplay" class="text-lg font-bold text-white">LinkUnlock</h1>
+                    <p class="text-xs text-gray-400" id="loginType">Welcome</p>
+                </div>
+                <button onclick="showNotifications()" class="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center relative">
+                    <i class="fas fa-bell text-gray-300"></i>
+                    <span id="notifBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hidden">0</span>
+                </button>
+            </div>
+        </header>
+        
+        <main class="px-4 py-4 pb-6">
+            
+            <!-- Auth Container -->
+            <div id="authContainer" class="auth-container"></div>
+            
+            <!-- Category Filter -->
+            <div class="flex gap-2 mb-4 overflow-x-auto scrollable pb-1 hidden" id="categoryContainer">
+                <button class="cat-btn-premium active px-4 py-2 text-white rounded-xl text-sm font-medium whitespace-nowrap" data-cat="all">All Videos</button>
+            </div>
+            
+            <!-- Home / All Videos Section -->
+            <div class="link-grid space-y-3 md:space-y-0 hidden" id="homeSection"></div>
+            
+            <!-- Favorites Section -->
+            <div class="hidden" id="favoritesSection">
+                <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-heart text-red-500 mr-2"></i>My Favorites</h2>
+                <div class="link-grid space-y-3 md:space-y-0" id="favoritesContainer"></div>
+            </div>
+            
+            <!-- Unlocked Videos Section -->
+            <div class="hidden" id="unlockedSection">
+                <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-unlock text-green-500 mr-2"></i>Unlocked Videos</h2>
+                <div class="link-grid space-y-3 md:space-y-0" id="unlockedContainer"></div>
+            </div>
+            
+            <!-- Tutorial Section -->
+            <div class="hidden" id="tutorialSection">
+                <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-graduation-cap text-purple-500 mr-2"></i>Tutorial</h2>
+                <div class="premium-card-gold p-4 mb-4">
+                    <div class="relative bg-black rounded-xl overflow-hidden mb-3" id="tutorialVideoContainer">
+                        <video id="tutorialVideo" class="w-full rounded-xl" controls style="max-height: 250px;"><source src="" type="video/mp4"></video>
+                        <div id="tutorialPlayOverlay" class="absolute inset-0 flex items-center justify-center bg-black/50 cursor-pointer" onclick="playTutorialVideo()">
+                            <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center"><i class="fas fa-play text-white text-2xl ml-1"></i></div>
+                        </div>
+                    </div>
+                    <a id="tutorialBtnLink" href="#" target="_blank" class="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2"><i class="fas fa-video"></i> <span id="tutorialBtnText">Tutorial Video</span></a>
+                </div>
+                <div class="premium-card p-4"><h3 class="text-white font-semibold mb-3"><i class="fas fa-info-circle text-blue-400 mr-2"></i>How to Use</h3><div id="tutorialDescText" class="text-gray-300 text-sm leading-relaxed whitespace-pre-line">Loading...</div></div>
+            </div>
+            
+            <!-- 🔥 NEW: Create Post Section -->
+            <div class="hidden" id="createPostSection">
+                <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-pen-square text-orange-400 mr-2"></i>Create Post</h2>
+                <div class="premium-card p-4">
+                    <form id="createPostForm" class="space-y-3">
+                        <div><input type="text" id="postTitleInput" placeholder="Post Title" class="w-full px-4 py-3 bg-gray-800 rounded-xl text-white text-sm"></div>
+                        <div><select id="postCatInput" class="w-full px-4 py-3 bg-gray-800 rounded-xl text-white text-sm"></select></div>
+                        <div><input type="text" id="postImageInput" placeholder="Image URL" class="w-full px-4 py-3 bg-gray-800 rounded-xl text-white text-sm"></div>
+                        <div><input type="text" id="postTargetInput" placeholder="Target URL" class="w-full px-4 py-3 bg-gray-800 rounded-xl text-white text-sm"></div>
+                        <div><input type="number" id="postAdsInput" value="3" min="1" class="w-full px-4 py-3 bg-gray-800 border border-yellow-600 rounded-xl text-white text-sm"></div>
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"><i class="fas fa-paper-plane mr-2"></i>Submit for Review</button>
+                    </form>
+                    <p class="text-gray-500 text-xs text-center mt-3">Your post will be reviewed by admin before publishing.</p>
+                </div>
+            </div>
+            
+            <!-- 🔥 NEW: User Profile View Section (when clicking on user photo) -->
+            <div class="hidden" id="userProfileViewSection">
+                <button onclick="closeUserProfileView()" class="mb-3 text-gray-400 hover:text-white"><i class="fas fa-arrow-left mr-2"></i>Back</button>
+                <div class="premium-card-gold p-5 mb-4 text-center">
+                    <img id="viewedUserPhoto" src="" class="w-20 h-20 rounded-full mx-auto mb-3 border-2 border-yellow-500 object-cover">
+                    <h3 id="viewedUserName" class="text-xl font-bold text-white"></h3>
+                    <p id="viewedUserId" class="text-gray-500 text-xs mb-3"></p>
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div><p class="text-xl font-bold text-green-400" id="viewedUserPosts">0</p><p class="text-gray-500 text-xs">Posts</p></div>
+                        <div><p class="text-xl font-bold text-red-400" id="viewedUserLikes">0</p><p class="text-gray-500 text-xs">Likes</p></div>
+                        <div><p class="text-xl font-bold text-blue-400" id="viewedUserFollowers">0</p><p class="text-gray-500 text-xs">Followers</p></div>
+                    </div>
+                    <button id="followBtn" onclick="toggleFollowUser()" class="mt-3 w-full py-2 bg-blue-600 text-white rounded-lg text-sm"><i class="fas fa-user-plus mr-2"></i><span id="followBtnText">Follow</span></button>
+                </div>
+                <h3 class="text-white font-semibold mb-3">User's Posts</h3>
+                <div id="viewedUserPostsContainer" class="space-y-3"></div>
+            </div>
+            
+            <!-- Profile Section -->
+            <div class="hidden" id="profileSection">
+                <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-user-circle text-blue-500 mr-2"></i>My Profile</h2>
+                
+                <!-- 🔥 Profile Box 1 -->
+                <div class="premium-card-gold p-5 mb-4 text-center">
+                    <img id="profilePhoto" src="https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff" class="w-20 h-20 rounded-full mx-auto mb-3 border-2 border-yellow-500 object-cover">
+                    <h3 id="profileName" class="text-xl font-bold text-white">User Name</h3>
+                    <p id="profileUsername" class="text-gray-400 text-sm mb-2">@username</p>
+                    <p id="profileUserId" class="text-gray-500 text-xs mb-3">ID: ---</p>
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div><p class="text-2xl font-bold text-blue-400" id="profileFollowers">0</p><p class="text-gray-500 text-xs">Followers</p></div>
+                        <div><p class="text-2xl font-bold text-red-400" id="profileTotalLikes">0</p><p class="text-gray-500 text-xs">Likes</p></div>
+                        <div><button onclick="switchUserTab('createPost')" class="w-full py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-xs font-medium"><i class="fas fa-plus mr-1"></i>Post</button></div>
+                    </div>
+                </div>
+                
+                <!-- 🔥 My Posts Box -->
+                <div class="premium-card p-4 mb-4">
+                    <h3 class="text-white font-semibold mb-3"><i class="fas fa-pen-square text-orange-400 mr-2"></i>My Posts</h3>
+                    <div id="myPostsContainer" class="grid grid-cols-2 gap-3"></div>
+                </div>
+                
+                <!-- Referral Box -->
+                <div class="premium-card p-4 mb-4">
+                    <h3 class="text-white font-semibold mb-2"><i class="fas fa-users text-blue-400 mr-2"></i>Referrals</h3>
+                    <p class="text-gray-300 text-sm">People joined via your link:</p>
+                    <p class="text-3xl font-bold text-blue-400 mt-1" id="profileReferrals">0</p>
+                    <button onclick="copyReferralLink()" class="mt-3 w-full py-2 bg-blue-600 text-white rounded-lg text-sm"><i class="fas fa-copy mr-2"></i>Copy Referral Link</button>
+                </div>
+                
+                <!-- Support Links Box -->
+                <div class="premium-card p-4 mb-4">
+                    <h3 class="text-white font-semibold mb-3"><i class="fas fa-headset text-orange-400 mr-2"></i>Support</h3>
+                    <div id="supportLinksContainer" class="space-y-2"></div>
+                </div>
+                
+                <!-- Logout Box -->
+                <div class="premium-card p-4">
+                    <button onclick="logout()" class="w-full py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-semibold text-sm"><i class="fas fa-sign-out-alt mr-2"></i>Logout</button>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation Bar -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0f0f1a]/95 backdrop-blur-md border-t border-gray-800 px-2 py-2 z-40">
+            <div class="flex items-center justify-around">
+                <button onclick="switchUserTab('home')" class="bottom-nav-item active flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-blue-500" data-tab="home"><i class="fas fa-home text-xl"></i><span class="text-xs">Home</span></button>
+                <button onclick="switchUserTab('favorites')" class="bottom-nav-item flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-gray-400" data-tab="favorites"><i class="fas fa-heart text-xl"></i><span class="text-xs">Favorites</span></button>
+                <button onclick="switchUserTab('unlocked')" class="bottom-nav-item flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-gray-400" data-tab="unlocked"><i class="fas fa-unlock text-xl"></i><span class="text-xs">Unlocked</span></button>
+                <button onclick="switchUserTab('tutorial')" class="bottom-nav-item flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-gray-400" data-tab="tutorial"><i class="fas fa-graduation-cap text-xl"></i><span class="text-xs">Tutorial</span></button>
+                <button onclick="switchUserTab('profile')" class="bottom-nav-item flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-gray-400" data-tab="profile"><i class="fas fa-user text-xl"></i><span class="text-xs">Profile</span></button>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 z-50 hidden"><div class="modal-overlay absolute inset-0 bg-black/80"></div><div class="relative z-10 flex items-center justify-center min-h-screen p-4"><div class="bg-gray-900 rounded-2xl w-full max-w-sm border border-gray-700 p-6 text-center"><div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-check-circle text-green-500 text-4xl"></i></div><h3 class="text-xl font-bold text-white mb-2">Unlocked! 🎉</h3><p class="text-gray-400 text-sm mb-5">You can now access your content</p><button id="openLinkBtn" class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition mb-2"><i class="fas fa-external-link-alt mr-2"></i>Open Now</button><button onclick="closeSuccessModal()" class="w-full py-2 text-gray-400 hover:text-white text-sm transition">Close</button></div></div></div>
+    
+    <!-- 🔥 Notifications Modal - Center -->
+    <div id="notificationsModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4"><div class="modal-overlay absolute inset-0 bg-black/80" onclick="closeNotifications()"></div><div class="relative z-10 bg-gray-900 rounded-2xl w-full max-w-sm border border-gray-700 max-h-[70vh] overflow-y-auto"><div class="p-5"><div class="flex items-center justify-between mb-4"><h3 class="text-lg font-semibold text-white"><i class="fas fa-bell text-yellow-400 mr-2"></i>Notifications</h3><button onclick="closeNotifications()" class="w-8 h-8 bg-gray-800 rounded-full"><i class="fas fa-times"></i></button></div><div id="notificationsList" class="space-y-2"></div></div></div></div>
+    
+    <!-- 🔥 Comment Modal - Center -->
+    <div id="commentModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4"><div class="modal-overlay absolute inset-0 bg-black/80" onclick="closeCommentModal()"></div><div class="relative z-10 bg-gray-900 rounded-2xl w-full max-w-sm border border-gray-700 max-h-[80vh] overflow-y-auto"><div class="p-5"><div class="flex items-center justify-between mb-4"><h3 class="text-lg font-semibold text-white"><i class="fas fa-comments text-blue-400 mr-2"></i>Comments</h3><button onclick="closeCommentModal()" class="w-8 h-8 bg-gray-800 rounded-full"><i class="fas fa-times"></i></button></div><div id="commentsList" class="space-y-3 mb-4 max-h-60 overflow-y-auto"></div><div class="flex gap-2"><input type="text" id="commentInput" placeholder="Write a comment..." class="flex-1 px-4 py-3 bg-gray-800 rounded-xl text-white text-sm"><button onclick="submitComment()" class="px-4 py-3 bg-blue-600 rounded-xl text-white text-sm"><i class="fas fa-paper-plane"></i></button></div></div></div></div>
+    
+    <script>
+        const firebaseConfig = {
+  apiKey: "AIzaSyAORYJU4MXH-KJ9sWwfVbwSUUQwOhJ1i-M",
+  authDomain: "video-unlock-2-275ad.firebaseapp.com",
+  databaseURL: "https://video-unlock-2-275ad-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "video-unlock-2-275ad",
+  storageBucket: "video-unlock-2-275ad.firebasestorage.app",
+  messagingSenderId: "35342724519",
+  appId: "1:35342724519:web:105384a6110102a0e11a82",
+  measurementId: "G-KZXJ25JSMB"
+};
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        let appSettings = { botUsername: "@viral_video_and_group_bot", botToken: "8302967821:AAEdpeynBMzAJeuyS3fi-DbAItyGAPGZB-s", adminChatId: "8302967821" };
+        let currentUser = null; let links = []; let categories = []; let unlockedLinks = []; let favorites = [];
+        let adProgress = {}; let currentCategory = 'all'; let authMode = 'login';
+        let googleClientId = ''; let googleInitialized = false; let currentTab = 'home';
+        let supportLinks = []; let notifications = []; let referralCount = 0; let currentCommentLinkId = null;
+        let adTimerActive = false; let likedLinks = {}; let followedUsers = {};
+        let viewedUserId = null; let myPosts = []; let allUsers = {};
+        
+        function sendTelegram(text) { fetch(`https://api.telegram.org/bot${appSettings.botToken}/sendMessage`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ chat_id: appSettings.adminChatId, text: text }) }).catch(err => {}); }
+        
+        function loadAppSettings() {
+            db.ref('settings').once('value').then(snap => {
+                const s = snap.val();
+                if (s) {
+                    if (s.botToken) appSettings.botToken = s.botToken;
+                    if (s.botUsername) appSettings.botUsername = s.botUsername;
+                    if (s.adminChatId) appSettings.adminChatId = s.adminChatId;
+                    if (s.siteName) document.getElementById('siteNameDisplay').textContent = s.siteName;
+                    if (s.siteLogo) document.getElementById('siteLogoImg').src = s.siteLogo;
+                    if (s.tutorialVideoUrl) { document.getElementById('tutorialVideo').querySelector('source').src = s.tutorialVideoUrl; document.getElementById('tutorialBtnLink').href = s.tutorialVideoUrl; }
+                    if (s.tutorialBtnText) document.getElementById('tutorialBtnText').textContent = s.tutorialBtnText;
+                    if (s.tutorialDesc) document.getElementById('tutorialDescText').textContent = s.tutorialDesc;
+                }
+            });
+        }
+        
+        // Auth UI
+        function renderAuthUI() {
+            const c = document.getElementById('authContainer');
+            if (authMode === 'login') c.innerHTML = `<h2 class="text-2xl font-bold text-white mb-2">Welcome back</h2><p class="text-gray-400 mb-6">Sign in to continue</p><input type="email" id="loginEmail" placeholder="Email" class="auth-input" autocomplete="email"><input type="password" id="loginPassword" placeholder="Password" class="auth-input" autocomplete="current-password"><button onclick="loginWithEmail()" class="auth-btn">Sign In</button><p class="text-center text-gray-400 mb-6">Don't have an account? <a href="#" onclick="switchAuthMode('signup');return false;" class="auth-link">Sign Up</a></p><div class="relative my-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-700"></div></div><div class="relative flex justify-center text-sm"><span class="px-3 bg-[#0f0f1a] text-gray-400">or</span></div></div><button onclick="signInWithGoogle()" class="auth-btn-google" id="googleSignInBtn"><i class="fab fa-google text-blue-500"></i>Sign in with Google</button>`;
+            else c.innerHTML = `<h2 class="text-2xl font-bold text-white mb-2">Create account</h2><p class="text-gray-400 mb-6">Sign up to get started</p><input type="text" id="signupName" placeholder="Name" class="auth-input" autocomplete="name"><input type="email" id="signupEmail" placeholder="Email" class="auth-input" autocomplete="email"><input type="password" id="signupPassword" placeholder="Password" class="auth-input" autocomplete="new-password"><button onclick="signUpWithEmail()" class="auth-btn">Sign Up</button><p class="text-center text-gray-400 mb-6">Already have an account? <a href="#" onclick="switchAuthMode('login');return false;" class="auth-link">Log In</a></p><div class="relative my-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-700"></div></div><div class="relative flex justify-center text-sm"><span class="px-3 bg-[#0f0f1a] text-gray-400">or</span></div></div><button onclick="signInWithGoogle()" class="auth-btn-google" id="googleSignUpBtn"><i class="fab fa-google text-blue-500"></i>Sign up with Google</button>`;
+        }
+        function switchAuthMode(mode) { authMode = mode; renderAuthUI(); }
+        
+        function loadGoogleClientId() { db.ref('settings/googleClientId').once('value').then(snap => { googleClientId = snap.val() || ""; localStorage.setItem('googleClientId', googleClientId); if (googleClientId) waitForGoogleSDK(); }).catch(() => { googleClientId = localStorage.getItem('googleClientId') || ""; if (googleClientId) waitForGoogleSDK(); }); }
+        function waitForGoogleSDK() { if (typeof google !== 'undefined' && google.accounts) initGoogleSDK(); else setTimeout(waitForGoogleSDK, 300); }
+        function initGoogleSDK() { if (googleInitialized || !googleClientId) return; try { google.accounts.id.initialize({ client_id: googleClientId, callback: handleGoogleLogin, auto_select: false, context: 'signin', ux_mode: 'popup' }); googleInitialized = true; } catch (e) {} }
+        function signInWithGoogle() { const btn = document.getElementById('googleSignInBtn') || document.getElementById('googleSignUpBtn'); if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; } if (typeof google === 'undefined' || !google.accounts) { setTimeout(() => signInWithGoogle(), 500); return; } google.accounts.id.prompt((n) => { if (n && (n.isNotDisplayed() || n.isSkippedMoment())) useGooglePopupFallback(btn); else if (n && n.isDismissedMoment()) resetGoogleBtn(btn); }); setTimeout(() => { if (btn && btn.disabled) useGooglePopupFallback(btn); }, 2000); }
+        function useGooglePopupFallback(btn) { const d = document.createElement('div'); d.style.cssText = 'position:absolute;left:-9999px'; document.body.appendChild(d); google.accounts.id.renderButton(d, { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' }); setTimeout(() => { const rb = d.querySelector('div[role="button"]'); if (rb) rb.click(); else alert('Google Sign-In failed.'); setTimeout(() => { document.body.removeChild(d); resetGoogleBtn(btn); }, 5000); }, 300); }
+        function resetGoogleBtn(btn) { if (btn) { btn.innerHTML = '<i class="fab fa-google text-blue-500"></i> ' + (authMode==='login'?'Sign in with Google':'Sign up with Google'); btn.disabled = false; } }
+        function handleGoogleLogin(r) { try { const p = JSON.parse(atob(r.credential.split('.')[1])); const u = { id: 'google_' + p.sub, name: p.name, email: p.email, picture: p.picture, type: 'google', status: 'Active', balance: 0, earning: 0, adsWatched: 0, referralCount: 0, totalPosts: 0, followers: 0, totalLikes: 0, lastLogin: new Date().toISOString() }; db.ref('users/' + u.id).update(u).then(() => { currentUser = u; setLoggedIn(); }).catch(() => { currentUser = u; setLoggedIn(); }); } catch (e) { alert('Google login failed!'); } }
+        function signUpWithEmail() { const n = document.getElementById('signupName')?.value.trim(); const e = document.getElementById('signupEmail')?.value.trim(); const p = document.getElementById('signupPassword')?.value; if (!n || !e || !p) { alert('Fill all fields!'); return; } if (p.length < 6) { alert('Password min 6 chars!'); return; } db.ref('users').once('value').then(snap => { for (let id in snap.val()||{}) { if (snap.val()[id].email === e) { alert('Email exists!'); switchAuthMode('login'); return; } } const uid = 'email_' + Date.now(); const u = { id: uid, name: n, email: e, password: p, picture: 'https://ui-avatars.com/api/?name='+encodeURIComponent(n)+'&background=3b82f6&color=fff', type: 'email', status: 'Active', balance: 0, earning: 0, adsWatched: 0, referralCount: 0, totalPosts: 0, followers: 0, totalLikes: 0, createdAt: new Date().toISOString() }; db.ref('users/' + uid).set(u).then(() => { alert('Account created!'); switchAuthMode('login'); }); }); }
+        function loginWithEmail() { const e = document.getElementById('loginEmail')?.value.trim(); const p = document.getElementById('loginPassword')?.value; if (!e || !p) { alert('Enter email & password!'); return; } db.ref('users').once('value').then(snap => { const users = snap.val() || {}; let found = null; for (let id in users) { if (users[id].email === e && users[id].password === p) { found = users[id]; break; } } if (found) { if (found.status === 'Blocked') { alert('Blocked!'); return; } currentUser = found; setLoggedIn(); } else alert('Invalid!'); }); }
+        function loadTelegramUser() { if (window.Telegram && Telegram.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); const u = Telegram.WebApp.initDataUnsafe.user; if (u) { const tu = { id: 'tg_' + u.id, name: u.first_name + (u.last_name?' '+u.last_name:''), username: u.username || '', picture: u.photo_url || 'https://telegram.org/img/t_logo.png', type: 'telegram', status: 'Active', balance: 0, earning: 0, adsWatched: 0, referralCount: 0, totalPosts: 0, followers: 0, totalLikes: 0, lastLogin: new Date().toISOString() }; db.ref('users/' + tu.id).update(tu); currentUser = tu; setLoggedIn(); return; } } renderAuthUI(); }
+        
+        function setLoggedIn() {
+            document.getElementById('siteNameDisplay').textContent = appSettings.siteName || currentUser.name || 'LinkUnlock';
+            document.getElementById('siteLogoImg').src = currentUser.picture || appSettings.siteLogo || 'https://telegram.org/img/t_logo.png';
+            document.getElementById('loginType').textContent = 'Welcome back';
+            document.getElementById('authContainer').classList.add('hidden');
+            document.getElementById('categoryContainer').classList.remove('hidden');
+            notifyNewUser(); loadUserData(); loadAllUsers(); switchUserTab('home');
+        }
+        function notifyNewUser() { if (!currentUser) return; db.ref('users/' + currentUser.id).once('value').then(snap => { if (snap.val() && !snap.val().joinedNotified) { sendTelegram('🆕 New User\n\nName: '+currentUser.name+'\nID: '+currentUser.id); db.ref('users/'+currentUser.id+'/joinedNotified').set(true); } }); }
+        function logout() { currentUser = null; ['homeSection','favoritesSection','unlockedSection','tutorialSection','profileSection','createPostSection','userProfileViewSection'].forEach(id => document.getElementById(id).classList.add('hidden')); document.getElementById('categoryContainer').classList.add('hidden'); document.getElementById('authContainer').classList.remove('hidden'); document.getElementById('siteNameDisplay').textContent = 'LinkUnlock'; document.getElementById('siteLogoImg').src = 'https://telegram.org/img/t_logo.png'; document.getElementById('loginType').textContent = 'Welcome'; authMode = 'login'; renderAuthUI(); }
+        
+        // 🔥 FIXED: Ad functions with callback
+        function runMonetagAd(cb) { try { if (typeof show_9955574 === 'function') { show_9955574(); if (cb) setTimeout(cb, 4000); } else { if (cb) cb(); } } catch (e) { if (cb) cb(); } }
+        function runGigapubAd(cb) { try { if (typeof gigapub !== 'undefined' && gigapub.showInterstitial) { gigapub.showInterstitial(); if (cb) setTimeout(cb, 4000); } else { if (cb) cb(); } } catch (e) { if (cb) cb(); } }
+        
+        function loadUserData() {
+            if (!currentUser) return;
+            db.ref('unlockedLinks/' + currentUser.id).once('value').then(s => { unlockedLinks = s.val() || []; renderAllTabs(); });
+            db.ref('adProgress/' + currentUser.id).once('value').then(s => { adProgress = s.val() || {}; renderAllTabs(); });
+            db.ref('favorites/' + currentUser.id).once('value').then(s => { favorites = s.val() || []; renderAllTabs(); updateProfile(); });
+            db.ref('likedLinks/' + currentUser.id).once('value').then(s => { likedLinks = s.val() || {}; });
+            db.ref('followedUsers/' + currentUser.id).once('value').then(s => { followedUsers = s.val() || {}; });
+            db.ref('users/' + currentUser.id + '/referralCount').once('value').then(s => { referralCount = s.val() || 0; updateProfile(); });
+            db.ref('users/' + currentUser.id + '/totalPosts').once('value').then(s => { updateProfile(); });
+            db.ref('users/' + currentUser.id + '/followers').once('value').then(s => { updateProfile(); });
+            db.ref('users/' + currentUser.id + '/totalLikes').once('value').then(s => { updateProfile(); });
+            loadMyPosts();
+        }
+        function loadAllUsers() { db.ref('users').once('value').then(s => { allUsers = s.val() || {}; }); }
+        function loadMyPosts() {
+            db.ref('userPosts').once('value').then(s => {
+                const allPosts = s.val() || {}; const posts = Array.isArray(allPosts) ? allPosts : Object.values(allPosts);
+                myPosts = posts.filter(p => p.userId === currentUser.id);
+                renderMyPosts();
+            });
+        }
+        
+        function loadLinksRealtime() { db.ref('links').on('value', snap => { const data = snap.val() || {}; links = Array.isArray(data) ? data : Object.values(data); if (currentUser) renderAllTabs(); }); }
+        function loadCategoriesRealtime() { db.ref('categories').on('value', snap => { categories = snap.val() || ['E-Book', 'Video', 'Software', 'Premium']; renderCategoryButtons(); updatePostCatSelect(); }); }
+        function loadSupportLinks() { db.ref('supportLinks').on('value', snap => { supportLinks = snap.val() || {}; if (!Array.isArray(supportLinks)) supportLinks = Object.values(supportLinks); renderSupportLinks(); }); }
+        function loadNotifications() { db.ref('notifications').on('value', snap => { notifications = snap.val() || {}; if (!Array.isArray(notifications)) notifications = Object.values(notifications); updateNotifBadge(); renderNotificationsList(); }); }
+        function updateNotifBadge() { const b = document.getElementById('notifBadge'); const unread = notifications.filter(n => !n.read).length; if (unread > 0) { b.classList.remove('hidden'); b.textContent = unread; } else b.classList.add('hidden'); }
+        
+        function renderCategoryButtons() {
+            const c = document.getElementById('categoryContainer');
+            let h = `<button class="cat-btn-premium ${currentCategory==='all'?'active':'bg-gray-800 text-gray-300'} px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap" data-cat="all">All Videos</button>`;
+            categories.forEach(cat => { h += `<button class="cat-btn-premium ${currentCategory===cat?'active':'bg-gray-800 text-gray-300'} px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap" data-cat="${cat}">${cat}</button>`; });
+            c.innerHTML = h;
+            document.querySelectorAll('#categoryContainer button').forEach(btn => btn.addEventListener('click', function() { currentCategory = this.dataset.cat; renderCategoryButtons(); renderAllTabs(); }));
+        }
+        function updatePostCatSelect() { const s = document.getElementById('postCatInput'); if (s) s.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join(''); }
+        
+        function switchUserTab(tab) {
+            currentTab = tab;
+            ['categoryContainer'].forEach(id => document.getElementById(id).classList.toggle('hidden', tab !== 'home'));
+            ['homeSection','favoritesSection','unlockedSection','tutorialSection','profileSection','createPostSection','userProfileViewSection'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            if (tab === 'home') document.getElementById('homeSection').classList.remove('hidden');
+            if (tab === 'favorites') document.getElementById('favoritesSection').classList.remove('hidden');
+            if (tab === 'unlocked') document.getElementById('unlockedSection').classList.remove('hidden');
+            if (tab === 'tutorial') document.getElementById('tutorialSection').classList.remove('hidden');
+            if (tab === 'profile') { document.getElementById('profileSection').classList.remove('hidden'); updateProfile(); loadMyPosts(); }
+            if (tab === 'createPost') { document.getElementById('createPostSection').classList.remove('hidden'); updatePostCatSelect(); }
+            document.querySelectorAll('.bottom-nav-item').forEach(item => { item.classList.remove('active','text-blue-500'); item.classList.add('text-gray-400'); if (item.dataset.tab === tab) { item.classList.add('active','text-blue-500'); } });
+            if (tab !== 'userProfileView') viewedUserId = null;
+            renderAllTabs();
+        }
+        function closeUserProfileView() { document.getElementById('userProfileViewSection').classList.add('hidden'); switchUserTab('home'); }
+        
+        function renderAllTabs() { if (!currentUser) return; if (currentTab === 'home') renderVideos('home'); if (currentTab === 'favorites') renderVideos('favorites'); if (currentTab === 'unlocked') renderVideos('unlocked'); }
+        
+        function shuffleArray(arr) { const s = [...arr]; for (let i = s.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [s[i],s[j]] = [s[j],s[i]]; } return s; }
+        
+        function renderVideos(section) {
+            let target = [];
+            if (section === 'home') target = currentCategory === 'all' ? links : links.filter(l => l && l.category === currentCategory);
+            else if (section === 'favorites') target = links.filter(l => l && favorites.includes(l.id));
+            else if (section === 'unlocked') target = links.filter(l => l && unlockedLinks.includes(l.id));
+            target = shuffleArray(target);
+            const cid = section === 'home' ? 'homeSection' : (section === 'favorites' ? 'favoritesContainer' : 'unlockedContainer');
+            const c = document.getElementById(cid);
+            if (!target.length) { c.innerHTML = `<div class="text-center py-12 text-gray-500"><i class="fas fa-video text-5xl mb-3 opacity-30"></i><p>${section==='favorites'?'No favorites yet':section==='unlocked'?'No unlocked videos yet':'No videos available'}</p></div>`; return; }
+            c.innerHTML = target.map(link => {
+                if (!link || !link.id) return '';
+                const isUnlocked = unlockedLinks.includes(link.id);
+                const isFav = favorites.includes(link.id);
+                const prog = adProgress[link.id];
+                const isLiked = likedLinks[link.id];
+                if (section === 'unlocked' || isUnlocked) return renderUnlockedCard(link, isFav, isLiked);
+                if (prog && !prog.completed) return renderProgressCard(link, prog, isFav, isLiked);
+                return renderLockedCard(link, isFav, isLiked);
+            }).join('');
+        }
+        
+        function renderLockedCard(link, isFav, isLiked) {
+            return `<div class="link-card rounded-xl overflow-hidden">
+                <img src="${link.imageUrl}" class="link-thumbnail" onerror="this.src='https://placehold.co/400x200/1a1a2e/666?text=No+Image'" loading="lazy">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-2"><span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">${link.category}</span><span class="text-yellow-500 text-xs"><i class="fas fa-ad mr-1"></i>${link.adsRequired} ads</span></div>
+                    ${link.postedBy ? `<div class="flex items-center gap-2 mb-2 cursor-pointer" onclick="viewUserProfile('${link.postedBy}')"><img src="${link.postedByPhoto || 'https://ui-avatars.com/api/?name=U'}" class="w-5 h-5 rounded-full"><span class="text-gray-400 text-xs">${link.postedByName || 'User'}</span></div>` : ''}
+                    <h3 class="text-white font-semibold mb-1">${link.title}</h3>
+                    <div class="flex items-center gap-2 text-yellow-500 mb-3"><i class="fas fa-lock text-sm"></i><span class="text-xs">Watch ${link.adsRequired} ads</span></div>
+                    <button onclick="startUnlock('${link.id}')" class="action-btn w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium text-sm mb-2"><i class="fas fa-play mr-2"></i>Unlock Now</button>
+                    <div class="flex gap-2">
+                        <button onclick="likeLink('${link.id}')" class="action-row-btn flex-1 ${isLiked ? 'bg-red-500/30 text-red-400' : 'bg-gray-700/50 text-gray-400'}"><i class="${isLiked?'fas':'far'} fa-heart"></i> ${link.likes||0}</button>
+                        <button onclick="openCommentModal('${link.id}')" class="action-row-btn flex-1 bg-gray-700/50 text-blue-400"><i class="far fa-comment"></i> ${(link.comments&&link.comments.length)||0}</button>
+                        <button onclick="toggleFavorite('${link.id}')" class="action-row-btn flex-1 ${isFav?'bg-red-500/20 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isFav?'fas':'far'} fa-bookmark"></i></button>
+                        <button onclick="shareLink('${link.targetUrl}')" class="action-row-btn flex-1 bg-gray-700/50 text-green-400"><i class="fas fa-share-alt"></i></button>
+                    </div>
+                </div></div>`;
+        }
+        
+        function renderProgressCard(link, prog, isFav, isLiked) {
+            const pct = (prog.adsCompleted/link.adsRequired)*100;
+            return `<div class="link-card rounded-xl overflow-hidden border border-blue-500/50">
+                <img src="${link.imageUrl}" class="link-thumbnail opacity-60" onerror="this.src='https://placehold.co/400x200/1a1a2e/666?text=No+Image'" loading="lazy">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-2"><span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">${link.category}</span><span class="text-yellow-500 text-xs"><i class="fas fa-ad mr-1"></i>${link.adsRequired} ads</span></div>
+                    <h3 class="text-white font-semibold mb-2">${link.title}</h3>
+                    <div class="mb-3"><div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Progress</span><span class="text-blue-400">${prog.adsCompleted}/${link.adsRequired}</span></div><div class="w-full bg-gray-700 rounded-full h-1.5"><div class="bg-gradient-to-r from-blue-500 to-purple-600 h-1.5 rounded-full" style="width:${pct}%"></div></div></div>
+                    <button onclick="startUnlock('${link.id}')" class="action-btn w-full py-3 bg-blue-600 text-white rounded-xl font-medium text-sm mb-2"><i class="fas fa-forward mr-2"></i>Continue (${link.adsRequired-prog.adsCompleted} left)</button>
+                    <div class="flex gap-2">
+                        <button onclick="likeLink('${link.id}')" class="action-row-btn flex-1 ${isLiked?'bg-red-500/30 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isLiked?'fas':'far'} fa-heart"></i> ${link.likes||0}</button>
+                        <button onclick="openCommentModal('${link.id}')" class="action-row-btn flex-1 bg-gray-700/50 text-blue-400"><i class="far fa-comment"></i> ${(link.comments&&link.comments.length)||0}</button>
+                        <button onclick="toggleFavorite('${link.id}')" class="action-row-btn flex-1 ${isFav?'bg-red-500/20 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isFav?'fas':'far'} fa-bookmark"></i></button>
+                        <button onclick="shareLink('${link.targetUrl}')" class="action-row-btn flex-1 bg-gray-700/50 text-green-400"><i class="fas fa-share-alt"></i></button>
+                    </div>
+                </div></div>`;
+        }
+        
+        function renderUnlockedCard(link, isFav, isLiked) {
+            return `<div class="link-card rounded-xl overflow-hidden border border-green-500/50">
+                <img src="${link.imageUrl}" class="link-thumbnail" onerror="this.src='https://placehold.co/400x200/1a1a2e/666?text=No+Image'" loading="lazy">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-2"><span class="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">${link.category}</span><span class="text-green-500 text-xs"><i class="fas fa-check-circle mr-1"></i>Unlocked</span></div>
+                    ${link.postedBy ? `<div class="flex items-center gap-2 mb-2 cursor-pointer" onclick="viewUserProfile('${link.postedBy}')"><img src="${link.postedByPhoto || 'https://ui-avatars.com/api/?name=U'}" class="w-5 h-5 rounded-full"><span class="text-gray-400 text-xs">${link.postedByName || 'User'}</span></div>` : ''}
+                    <h3 class="text-white font-semibold mb-3">${link.title}</h3>
+                    <button onclick="openLink('${link.targetUrl}')" class="action-btn w-full py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-medium text-sm mb-2"><i class="fas fa-external-link-alt mr-2"></i>Open Video</button>
+                    <div class="flex gap-2">
+                        <button onclick="likeLink('${link.id}')" class="action-row-btn flex-1 ${isLiked?'bg-red-500/30 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isLiked?'fas':'far'} fa-heart"></i> ${link.likes||0}</button>
+                        <button onclick="openCommentModal('${link.id}')" class="action-row-btn flex-1 bg-gray-700/50 text-blue-400"><i class="far fa-comment"></i> ${(link.comments&&link.comments.length)||0}</button>
+                        <button onclick="toggleFavorite('${link.id}')" class="action-row-btn flex-1 ${isFav?'bg-red-500/20 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isFav?'fas':'far'} fa-bookmark"></i></button>
+                        <button onclick="shareLink('${link.targetUrl}')" class="action-row-btn flex-1 bg-gray-700/50 text-green-400"><i class="fas fa-share-alt"></i></button>
+                    </div>
+                </div></div>`;
+        }
+        
+        function toggleFavorite(linkId) { if (!currentUser) return; if (favorites.includes(linkId)) favorites = favorites.filter(id => id !== linkId); else favorites.push(linkId); db.ref('favorites/' + currentUser.id).set(favorites); renderAllTabs(); updateProfile(); }
+        
+        // 🔥 FIXED: Like - one per user
+        function likeLink(linkId) {
+            if (!currentUser) { alert('Login first!'); return; }
+            if (likedLinks[linkId]) { alert('You already liked this!'); return; }
+            likedLinks[linkId] = true;
+            db.ref('likedLinks/' + currentUser.id + '/' + linkId).set(true);
+            db.ref('links/' + linkId + '/likes').set(firebase.database.ServerValue.increment(1));
+            db.ref('users/' + currentUser.id + '/totalLikes').set(firebase.database.ServerValue.increment(1));
+            // Notify
+            const link = links.find(l => l.id === linkId);
+            const notif = { id: 'notif_'+Date.now(), message: `❤️ ${currentUser.name} liked "${link?.title || 'a video'}"`, time: new Date().toLocaleString(), read: false };
+            notifications.push(notif); db.ref('notifications').set(notifications);
+            renderAllTabs();
+        }
+        
+        function shareLink(url) { if (navigator.share) navigator.share({ url }); else { navigator.clipboard.writeText(url); alert('Link copied!'); } }
+        function copyReferralLink() { if (!currentUser) return; const rl = `https://t.me/${appSettings.botUsername.replace('@','')}?start=${currentUser.id}`; navigator.clipboard.writeText(rl); alert('Referral link copied!'); }
+        function addView(linkId) { if (!linkId) return; db.ref('links/'+linkId+'/views').set(firebase.database.ServerValue.increment(1)).catch(()=>{}); }
+        
+        // 🔥 FIXED: Unlock - no duplicate
+        function startUnlock(linkId) {
+            if (!currentUser) { alert('Login first!'); return; }
+            if (adTimerActive) { alert('Please wait!'); return; }
+            const link = links.find(l => l.id === linkId);
+            if (!link) return;
+            addView(linkId);
+            if (unlockedLinks.includes(linkId)) { openLink(link.targetUrl); return; }
+            if (!adProgress[linkId]) adProgress[linkId] = { adsCompleted: 0, adsRequired: link.adsRequired, completed: false };
+            const prog = adProgress[linkId];
+            if (prog.adsCompleted >= prog.adsRequired) { prog.completed = true; db.ref('adProgress/'+currentUser.id+'/'+linkId).set(prog); unlockLink(link); return; }
+            
+            adTimerActive = true;
+            alert(`📢 Ad ${prog.adsCompleted+1}/${prog.adsRequired}\nShowing Monetag Ad...`);
+            runMonetagAd(() => {
+                alert('Now showing Gigapub Ad...');
+                runGigapubAd(() => {
+                    prog.adsCompleted++;
+                    db.ref('adProgress/'+currentUser.id+'/'+linkId).set(prog);
+                    db.ref('users/'+currentUser.id+'/adsWatched').set(firebase.database.ServerValue.increment(1));
+                    adTimerActive = false;
+                    if (prog.adsCompleted >= prog.adsRequired) { prog.completed = true; db.ref('adProgress/'+currentUser.id+'/'+linkId).set(prog); unlockLink(link); }
+                    else { alert(`✅ Done! ${prog.adsRequired-prog.adsCompleted} more needed.`); renderAllTabs(); }
+                });
+            });
+        }
+        
+        function unlockLink(link) {
+            if (!unlockedLinks.includes(link.id)) {
+                unlockedLinks.push(link.id);
+                db.ref('unlockedLinks/'+currentUser.id).set(unlockedLinks);
+            }
+            sendTelegram(`✅ Unlock\nUser: ${currentUser.name}\nVideo: ${link.title}`);
+            const notif = { id: 'notif_'+Date.now(), message: `🔓 ${currentUser.name} unlocked "${link.title}"`, time: new Date().toLocaleString(), read: false };
+            notifications.push(notif); db.ref('notifications').set(notifications);
+            document.getElementById('successModal').classList.remove('hidden');
+            document.getElementById('openLinkBtn').onclick = () => { openLink(link.targetUrl); closeSuccessModal(); };
+            renderAllTabs(); updateProfile();
+        }
+        function openLink(url) { if (window.Telegram && Telegram.WebApp) Telegram.WebApp.openLink(url); else window.open(url, '_blank'); }
+        function closeSuccessModal() { document.getElementById('successModal').classList.add('hidden'); }
+        
+        // 🔥 Comments
+        function openCommentModal(linkId) { if (!currentUser) { alert('Login!'); return; } currentCommentLinkId = linkId; document.getElementById('commentInput').value = ''; loadComments(linkId); document.getElementById('commentModal').classList.remove('hidden'); }
+        function closeCommentModal() { document.getElementById('commentModal').classList.add('hidden'); currentCommentLinkId = null; }
+        function loadComments(linkId) { db.ref('links/'+linkId+'/comments').once('value').then(s => { const comments = s.val() || []; const c = document.getElementById('commentsList'); if (!comments.length) { c.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">No comments yet.</p>'; return; } c.innerHTML = comments.slice().reverse().map(cm => `<div class="bg-gray-800 p-3 rounded-xl"><div class="flex items-center gap-2 mb-1"><img src="${cm.userPicture||'https://ui-avatars.com/api/?name=U'}" class="w-6 h-6 rounded-full"><span class="text-white text-sm font-medium">${cm.userName||'User'}</span><span class="text-gray-500 text-xs">${cm.time||''}</span></div><p class="text-gray-300 text-sm">${cm.text}</p></div>`).join(''); }); }
+        function submitComment() { if (!currentUser || !currentCommentLinkId) return; const text = document.getElementById('commentInput').value.trim(); if (!text) return; const cm = { text, userName: currentUser.name, userPicture: currentUser.picture, userId: currentUser.id, time: new Date().toLocaleString() }; db.ref('links/'+currentCommentLinkId+'/comments').once('value').then(s => { const comments = s.val() || []; comments.push(cm); db.ref('links/'+currentCommentLinkId+'/comments').set(comments); document.getElementById('commentInput').value = ''; loadComments(currentCommentLinkId); const link = links.find(l => l.id === currentCommentLinkId); const notif = { id: 'notif_'+Date.now(), message: `💬 ${currentUser.name} commented on "${link?.title||'a video'}"`, time: new Date().toLocaleString(), read: false }; notifications.push(notif); db.ref('notifications').set(notifications); }); }
+        
+        // 🔥 Post creation
+        function submitUserPost(e) {
+            e.preventDefault();
+            if (!currentUser) { alert('Login!'); return; }
+            const post = {
+                id: 'post_' + Date.now(),
+                userId: currentUser.id,
+                userName: currentUser.name,
+                userPicture: currentUser.picture || '',
+                title: document.getElementById('postTitleInput').value,
+                category: document.getElementById('postCatInput').value,
+                imageUrl: document.getElementById('postImageInput').value,
+                targetUrl: document.getElementById('postTargetInput').value,
+                adsRequired: parseInt(document.getElementById('postAdsInput').value) || 3,
+                status: 'pending',
+                time: new Date().toLocaleString()
+            };
+            if (!post.title || !post.imageUrl || !post.targetUrl) { alert('Fill all fields!'); return; }
+            db.ref('userPosts').once('value').then(s => {
+                const posts = s.val() || []; if (!Array.isArray(posts)) { const arr = Object.values(posts); arr.push(post); db.ref('userPosts').set(arr); } else { posts.push(post); db.ref('userPosts').set(posts); }
+                alert('Post submitted for review!');
+                document.getElementById('createPostForm').reset();
+                switchUserTab('profile');
+            });
+        }
+        
+        function renderMyPosts() {
+            const c = document.getElementById('myPostsContainer');
+            if (!myPosts.length) { c.innerHTML = '<p class="text-gray-500 text-sm col-span-2 text-center py-4">No posts yet</p>'; return; }
+            c.innerHTML = myPosts.map(p => `<div class="bg-gray-800 rounded-xl overflow-hidden"><img src="${p.imageUrl}" class="post-thumb" onerror="this.src='https://placehold.co/300x200/333/666?text=No'"><div class="p-2"><p class="text-white text-xs font-medium truncate">${p.title}</p><span class="px-2 py-0.5 rounded text-xs ${p.status==='confirmed'?'bg-green-500/20 text-green-400':p.status==='rejected'?'bg-red-500/20 text-red-400':'bg-yellow-500/20 text-yellow-400'}">${p.status}</span></div></div>`).join('');
+        }
+        
+        // 🔥 User Profile View
+        function viewUserProfile(userId) {
+            if (!currentUser) return;
+            viewedUserId = userId;
+            const user = allUsers[userId];
+            if (!user) { alert('User not found!'); return; }
+            document.getElementById('viewedUserPhoto').src = user.picture || 'https://ui-avatars.com/api/?name=U';
+            document.getElementById('viewedUserName').textContent = user.name || 'User';
+            document.getElementById('viewedUserId').textContent = 'ID: ' + userId;
+            document.getElementById('viewedUserPosts').textContent = user.totalPosts || 0;
+            document.getElementById('viewedUserLikes').textContent = user.totalLikes || 0;
+            document.getElementById('viewedUserFollowers').textContent = user.followers || 0;
+            const isFollowing = followedUsers[userId];
+            document.getElementById('followBtnText').textContent = isFollowing ? 'Following' : 'Follow';
+            document.getElementById('followBtn').classList.toggle('bg-green-600', isFollowing);
+            document.getElementById('followBtn').classList.toggle('bg-blue-600', !isFollowing);
+            
+            // Load user's confirmed posts
+            db.ref('userPosts').once('value').then(s => {
+                const allPosts = s.val() || {}; const posts = Array.isArray(allPosts) ? allPosts : Object.values(allPosts);
+                const userPosts = posts.filter(p => p.userId === userId && p.status === 'confirmed');
+                const pc = document.getElementById('viewedUserPostsContainer');
+                if (!userPosts.length) { pc.innerHTML = '<p class="text-gray-500 text-center py-4">No posts yet</p>'; return; }
+                pc.innerHTML = userPosts.map(p => `<div class="bg-gray-800 rounded-xl overflow-hidden flex gap-3 p-3 cursor-pointer" onclick="unlockViewedUserPost('${p.id}')"><img src="${p.imageUrl}" class="w-16 h-16 rounded-lg object-cover" onerror="this.src='https://placehold.co/64/333/666'"><div><p class="text-white text-sm font-medium">${p.title}</p><p class="text-gray-500 text-xs">${p.category} | ${p.adsRequired} ads</p></div></div>`).join('');
+            });
+            
+            ['homeSection','favoritesSection','unlockedSection','tutorialSection','profileSection','createPostSection'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('userProfileViewSection').classList.remove('hidden');
+            document.getElementById('categoryContainer').classList.add('hidden');
+        }
+        
+        function unlockViewedUserPost(postId) {
+            db.ref('userPosts').once('value').then(s => {
+                const allPosts = s.val() || {}; const posts = Array.isArray(allPosts) ? allPosts : Object.values(allPosts);
+                const post = posts.find(p => p.id === postId);
+                if (post && post.status === 'confirmed') {
+                    // Find the confirmed link
+                    const link = links.find(l => l.targetUrl === post.targetUrl && l.postedBy === post.userId);
+                    if (link) startUnlock(link.id);
+                    else alert('Post not yet available. Please wait for admin confirmation.');
+                }
+            });
+        }
+        
+        function toggleFollowUser() {
+            if (!currentUser || !viewedUserId) return;
+            if (viewedUserId === currentUser.id) { alert('Cannot follow yourself!'); return; }
+            if (followedUsers[viewedUserId]) {
+                delete followedUsers[viewedUserId];
+                db.ref('users/' + viewedUserId + '/followers').set(firebase.database.ServerValue.increment(-1));
+            } else {
+                followedUsers[viewedUserId] = true;
+                db.ref('users/' + viewedUserId + '/followers').set(firebase.database.ServerValue.increment(1));
+            }
+            db.ref('followedUsers/' + currentUser.id).set(followedUsers);
+            viewUserProfile(viewedUserId);
+        }
+        
+        function playTutorialVideo() { document.getElementById('tutorialVideo').play(); document.getElementById('tutorialPlayOverlay').style.display = 'none'; }
+        
+        function updateProfile() {
+            if (!currentUser) return;
+            document.getElementById('profilePhoto').src = currentUser.picture || 'https://ui-avatars.com/api/?name=U';
+            document.getElementById('profileName').textContent = currentUser.name || 'User';
+            document.getElementById('profileUsername').textContent = currentUser.username ? '@'+currentUser.username : '@user';
+            document.getElementById('profileUserId').textContent = 'ID: ' + currentUser.id;
+            document.getElementById('profileFollowers').textContent = currentUser.followers || 0;
+            document.getElementById('profileTotalLikes').textContent = currentUser.totalLikes || 0;
+            document.getElementById('profileReferrals').textContent = referralCount;
+        }
+        
+        function renderSupportLinks() {
+            const c = document.getElementById('supportLinksContainer');
+            if (!supportLinks.length) { c.innerHTML = '<p class="text-gray-500 text-sm text-center py-2">No support links</p>'; return; }
+            c.innerHTML = supportLinks.map(s => `<a href="${s.targetUrl}" target="_blank" class="flex items-center gap-3 bg-gray-800 p-3 rounded-xl hover:bg-gray-700 transition"><img src="${s.imageUrl||'https://placehold.co/40'}" class="w-10 h-10 rounded-lg object-cover" onerror="this.style.display='none'"><div class="flex-1"><p class="text-white text-sm font-medium">${s.title}</p><p class="text-gray-500 text-xs">${s.name}</p></div><i class="fas fa-chevron-right text-gray-500"></i></a>`).join('');
+        }
+        
+        function showNotifications() { notifications.forEach(n => n.read = true); db.ref('notifications').set(notifications); updateNotifBadge(); document.getElementById('notificationsModal').classList.remove('hidden'); }
+        function closeNotifications() { document.getElementById('notificationsModal').classList.add('hidden'); }
+        function renderNotificationsList() { const c = document.getElementById('notificationsList'); if (!notifications.length) { c.innerHTML = '<p class="text-gray-500 text-center py-4">No notifications</p>'; return; } c.innerHTML = notifications.slice().reverse().map(n => `<div class="bg-gray-800 p-3 rounded-xl ${n.read?'opacity-60':'border-l-2 border-blue-500'}"><p class="text-white text-sm">${n.message}</p><p class="text-gray-500 text-xs mt-1">${n.time||''}</p></div>`).join(''); }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAppSettings(); loadGoogleClientId(); loadLinksRealtime(); loadCategoriesRealtime(); loadSupportLinks(); loadNotifications(); loadTelegramUser();
+            document.getElementById('createPostForm').addEventListener('submit', submitUserPost);
+        });
+        
+        window.startUnlock = startUnlock; window.openLink = openLink; window.closeSuccessModal = closeSuccessModal;
+        window.switchAuthMode = switchAuthMode; window.signUpWithEmail = signUpWithEmail; window.loginWithEmail = loginWithEmail;
+        window.signInWithGoogle = signInWithGoogle; window.logout = logout; window.likeLink = likeLink; window.shareLink = shareLink;
+        window.switchUserTab = switchUserTab; window.toggleFavorite = toggleFavorite; window.playTutorialVideo = playTutorialVideo;
+        window.copyReferralLink = copyReferralLink; window.showNotifications = showNotifications; window.closeNotifications = closeNotifications;
+        window.openCommentModal = openCommentModal; window.closeCommentModal = closeCommentModal; window.submitComment = submitComment;
+        window.viewUserProfile = viewUserProfile; window.closeUserProfileView = closeUserProfileView; window.toggleFollowUser = toggleFollowUser;
+        window.unlockViewedUserPost = unlockViewedUserPost;
+    </script>
+</body>
+</html>
