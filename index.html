@@ -11,7 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <!-- 🔥 3 Ad Platforms -->
+    <!-- 3 Ad Platforms -->
     <script src='//libtl.com/sdk.js' data-zone='9955574' data-sdk='show_9955574'></script>
     <script src="https://ad.gigapub.tech/script?id=6234"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
@@ -53,6 +53,11 @@
         .action-row-btn { padding: 10px 12px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 10px; cursor: pointer; transition: all 0.15s ease; }
         .action-row-btn:active { transform: scale(0.95); }
         .post-thumb { width: 100%; aspect-ratio: 16/10; object-fit: cover; border-radius: 8px; background: #1a1a2e; }
+        
+        /* 🔥 Countdown Overlay */
+        .countdown-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 5; border-radius: 12px; }
+        .countdown-number { font-size: 48px; font-weight: bold; color: #3b82f6; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
         
         @media (min-width: 768px) { .max-w-md { max-width: 900px !important; } .link-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; } }
     </style>
@@ -105,7 +110,7 @@
                 <div class="premium-card p-4"><h3 class="text-white font-semibold mb-3"><i class="fas fa-info-circle text-blue-400 mr-2"></i>How to Use</h3><div id="tutorialDescText" class="text-gray-300 text-sm leading-relaxed whitespace-pre-line">Loading...</div></div>
             </div>
             
-            <!-- 🔥 Create Post Section -->
+            <!-- Create Post Section -->
             <div class="hidden" id="createPostSection">
                 <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-pen-square text-orange-400 mr-2"></i>Create Post</h2>
                 <div class="premium-card p-4">
@@ -121,7 +126,7 @@
                 </div>
             </div>
             
-            <!-- 🔥 Edit Post Section -->
+            <!-- Edit Post Section -->
             <div class="hidden" id="editPostSection">
                 <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-edit text-blue-400 mr-2"></i>Edit Post</h2>
                 <div class="premium-card p-4">
@@ -173,7 +178,6 @@
                     </div>
                 </div>
                 
-                <!-- My Posts Box with Edit -->
                 <div class="premium-card p-4 mb-4">
                     <h3 class="text-white font-semibold mb-3"><i class="fas fa-pen-square text-orange-400 mr-2"></i>My Posts</h3>
                     <div id="myPostsContainer" class="grid grid-cols-2 gap-3"></div>
@@ -209,6 +213,16 @@
         </nav>
     </div>
     
+    <!-- 🔥 Countdown Modal -->
+    <div id="countdownModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="modal-overlay absolute inset-0 bg-black/80"></div>
+        <div class="relative z-10 bg-gray-900 rounded-2xl w-full max-w-xs border border-gray-700 p-8 text-center">
+            <p class="text-gray-400 text-sm mb-3">Please wait</p>
+            <div class="text-5xl font-bold text-blue-400" id="countdownNumber">20</div>
+            <p class="text-gray-500 text-xs mt-3">seconds</p>
+        </div>
+    </div>
+    
     <!-- Success Modal -->
     <div id="successModal" class="fixed inset-0 z-50 hidden"><div class="modal-overlay absolute inset-0 bg-black/80"></div><div class="relative z-10 flex items-center justify-center min-h-screen p-4"><div class="bg-gray-900 rounded-2xl w-full max-w-sm border border-gray-700 p-6 text-center"><div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-check-circle text-green-500 text-4xl"></i></div><h3 class="text-xl font-bold text-white mb-2">Unlocked! 🎉</h3><p class="text-gray-400 text-sm mb-5">You can now access your content</p><button id="openLinkBtn" class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition mb-2"><i class="fas fa-external-link-alt mr-2"></i>Open Now</button><button onclick="closeSuccessModal()" class="w-full py-2 text-gray-400 hover:text-white text-sm transition">Close</button></div></div></div>
     
@@ -232,7 +246,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         
-        let appSettings = { botUsername: "@viral_video_and_group_bot", botToken: "8302967821:AAEdpeynBMzAJeuyS3fi-DbAItyGAPGZB-s", adminChatId: "8302967821", monetagZoneId: "9955574", gigapubScriptId: "6234", adsgramBlockId: "30213" };
+        let appSettings = { botUsername: "@viral_video_and_group_bot", botToken: "8302967821:AAEdpeynBMzAJeuyS3fi-DbAItyGAPGZB-s", adminChatId: "8302967821" };
         let currentUser = null; let links = []; let categories = []; let unlockedLinks = []; let favorites = [];
         let adProgress = {}; let currentCategory = 'all'; let authMode = 'login';
         let googleClientId = ''; let googleInitialized = false; let currentTab = 'home';
@@ -240,6 +254,7 @@
         let adTimerActive = false; let likedLinks = {}; let followedUsers = {};
         let viewedUserId = null; let myPosts = []; let allUsers = {}; let adminUsers = {};
         let adSettings = { monetagZoneId: "9955574", gigapubScriptId: "6234", adsgramBlockId: "30213" };
+        let countdownInterval = null;
         
         function sendTelegram(text) { fetch(`https://api.telegram.org/bot${appSettings.botToken}/sendMessage`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ chat_id: appSettings.adminChatId, text: text }) }).catch(err => {}); }
         
@@ -291,16 +306,24 @@
         function notifyNewUser() { if (!currentUser) return; db.ref('users/' + currentUser.id).once('value').then(snap => { if (snap.val() && !snap.val().joinedNotified) { sendTelegram('🆕 New User\n\nName: '+currentUser.name+'\nID: '+currentUser.id); db.ref('users/'+currentUser.id+'/joinedNotified').set(true); } }); }
         function logout() { currentUser = null; ['homeSection','favoritesSection','unlockedSection','tutorialSection','profileSection','createPostSection','editPostSection','userProfileViewSection'].forEach(id => document.getElementById(id).classList.add('hidden')); document.getElementById('categoryContainer').classList.add('hidden'); document.getElementById('authContainer').classList.remove('hidden'); document.getElementById('siteNameDisplay').textContent = 'LinkUnlock'; document.getElementById('siteLogoImg').src = 'https://telegram.org/img/t_logo.png'; document.getElementById('loginType').textContent = 'Welcome'; authMode = 'login'; renderAuthUI(); }
         
-        // 🔥 FIXED: 3 Ad Platforms
+        // 🔥 FIXED: Isolated Ad Functions
         function runMonetagAd(cb) { try { if (typeof show_9955574 === 'function') { show_9955574(); if (cb) setTimeout(cb, 4000); } else { if (cb) cb(); } } catch (e) { if (cb) cb(); } }
         function runGigapubAd(cb) { try { if (typeof window.showGiga === 'function') { window.showGiga().then(() => { if (cb) setTimeout(cb, 4000); }).catch(() => { if (cb) cb(); }); } else { if (cb) cb(); } } catch (e) { if (cb) cb(); } }
         function runAdsgramAd(cb) { try { if (typeof window.Adsgram !== 'undefined') { const AdController = window.Adsgram.init({ blockId: adSettings.adsgramBlockId || "30213" }); AdController.show().then(() => { if (cb) setTimeout(cb, 4000); }).catch(() => { if (cb) cb(); }); } else { if (cb) cb(); } } catch (e) { if (cb) cb(); } }
         
+        // 🔥 FIXED: Only the selected network runs, no mix
         function runAdByNetwork(network, cb) {
             if (network === 'monetag') runMonetagAd(cb);
             else if (network === 'gigapub') runGigapubAd(cb);
             else if (network === 'adsgram') runAdsgramAd(cb);
-            else { runMonetagAd(() => runGigapubAd(() => runAdsgramAd(cb))); }
+            else if (network === 'all') {
+                // Mix: random one
+                const nets = ['monetag','gigapub','adsgram'];
+                const pick = nets[Math.floor(Math.random()*nets.length)];
+                if (pick === 'monetag') runMonetagAd(cb);
+                else if (pick === 'gigapub') runGigapubAd(cb);
+                else runAdsgramAd(cb);
+            } else { if (cb) cb(); }
         }
         
         function loadUserData() {
@@ -359,14 +382,14 @@
         function closeUserProfileView() { document.getElementById('userProfileViewSection').classList.add('hidden'); switchUserTab('home'); }
         
         function renderAllTabs() { if (!currentUser) return; if (currentTab === 'home') renderVideos('home'); if (currentTab === 'favorites') renderVideos('favorites'); if (currentTab === 'unlocked') renderVideos('unlocked'); }
-        function shuffleArray(arr) { const s = [...arr]; for (let i = s.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [s[i],s[j]] = [s[j],s[i]]; } return s; }
         
+        // 🔥 NO SHUFFLE - videos stay in order
         function renderVideos(section) {
             let target = [];
             if (section === 'home') target = currentCategory === 'all' ? links : links.filter(l => l && l.category === currentCategory);
             else if (section === 'favorites') target = links.filter(l => l && favorites.includes(l.id));
             else if (section === 'unlocked') target = links.filter(l => l && unlockedLinks.includes(l.id));
-            target = shuffleArray(target);
+            // NO SHUFFLE
             const cid = section === 'home' ? 'homeSection' : (section === 'favorites' ? 'favoritesContainer' : 'unlockedContainer');
             const c = document.getElementById(cid);
             if (!target.length) { c.innerHTML = `<div class="text-center py-12 text-gray-500"><i class="fas fa-video text-5xl mb-3 opacity-30"></i><p>${section==='favorites'?'No favorites yet':section==='unlocked'?'No unlocked videos yet':'No videos available'}</p></div>`; return; }
@@ -390,38 +413,41 @@
         }
         
         function renderLockedCard(link, isFav, isLiked) {
-            return `<div class="link-card rounded-xl overflow-hidden">
+            return `<div class="link-card rounded-xl overflow-hidden relative" id="card_${link.id}">
                 <img src="${link.imageUrl}" class="link-thumbnail" onerror="this.src='https://placehold.co/400x200/1a1a2e/666?text=No+Image'" loading="lazy">
                 <div class="p-4">
-                    <div class="flex items-center justify-between mb-2"><span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">${link.category}</span><span class="text-yellow-500 text-xs"><i class="fas fa-ad mr-1"></i>${link.adsRequired} ads</span></div>
+                    <div class="flex items-center justify-between mb-2"><span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">${link.category}</span><span class="text-yellow-500 text-xs"><i class="fas fa-ad mr-1"></i>${link.adsRequired} ads (${link.adNetwork||'all'})</span></div>
                     ${postedByBadge(link)}
                     <h3 class="text-white font-semibold mb-1">${link.title}</h3>
                     <div class="flex items-center gap-2 text-yellow-500 mb-3"><i class="fas fa-lock text-sm"></i><span class="text-xs">Watch ${link.adsRequired} ads</span></div>
-                    <button onclick="startUnlock('${link.id}')" class="action-btn w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium text-sm mb-2"><i class="fas fa-play mr-2"></i>Unlock Now</button>
+                    <!-- 🔥 Countdown overlay (hidden by default) -->
+                    <div id="countdownOverlay_${link.id}" class="countdown-overlay hidden"><div class="text-center"><div class="countdown-number" id="countdownNum_${link.id}">20</div><p class="text-gray-400 text-xs mt-1">seconds</p></div></div>
+                    <button id="unlockBtn_${link.id}" onclick="startUnlock('${link.id}')" class="action-btn w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium text-sm mb-2"><i class="fas fa-play mr-2"></i>Unlock Now</button>
                     <div class="flex gap-2">
                         <button onclick="likeLink('${link.id}')" class="action-row-btn flex-1 ${isLiked ? 'bg-red-500/30 text-red-400' : 'bg-gray-700/50 text-gray-400'}"><i class="${isLiked?'fas':'far'} fa-heart"></i> ${link.likes||0}</button>
                         <button onclick="openCommentModal('${link.id}')" class="action-row-btn flex-1 bg-gray-700/50 text-blue-400"><i class="far fa-comment"></i> ${(link.comments&&link.comments.length)||0}</button>
                         <button onclick="toggleFavorite('${link.id}')" class="action-row-btn flex-1 ${isFav?'bg-red-500/20 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isFav?'fas':'far'} fa-bookmark"></i></button>
-                        <button onclick="shareLink('${link.targetUrl}')" class="action-row-btn flex-1 bg-gray-700/50 text-green-400"><i class="fas fa-share-alt"></i></button>
+                        <button onclick="shareBotLink('${link.id}')" class="action-row-btn flex-1 bg-gray-700/50 text-green-400"><i class="fas fa-share-alt"></i></button>
                     </div>
                 </div></div>`;
         }
         
         function renderProgressCard(link, prog, isFav, isLiked) {
             const pct = (prog.adsCompleted/link.adsRequired)*100;
-            return `<div class="link-card rounded-xl overflow-hidden border border-blue-500/50">
+            return `<div class="link-card rounded-xl overflow-hidden border border-blue-500/50 relative" id="card_${link.id}">
                 <img src="${link.imageUrl}" class="link-thumbnail opacity-60" onerror="this.src='https://placehold.co/400x200/1a1a2e/666?text=No+Image'" loading="lazy">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-2"><span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">${link.category}</span><span class="text-yellow-500 text-xs"><i class="fas fa-ad mr-1"></i>${link.adsRequired} ads</span></div>
                     ${postedByBadge(link)}
                     <h3 class="text-white font-semibold mb-2">${link.title}</h3>
                     <div class="mb-3"><div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Progress</span><span class="text-blue-400">${prog.adsCompleted}/${link.adsRequired}</span></div><div class="w-full bg-gray-700 rounded-full h-1.5"><div class="bg-gradient-to-r from-blue-500 to-purple-600 h-1.5 rounded-full" style="width:${pct}%"></div></div></div>
-                    <button onclick="startUnlock('${link.id}')" class="action-btn w-full py-3 bg-blue-600 text-white rounded-xl font-medium text-sm mb-2"><i class="fas fa-forward mr-2"></i>Continue (${link.adsRequired-prog.adsCompleted} left)</button>
+                    <div id="countdownOverlay_${link.id}" class="countdown-overlay hidden"><div class="text-center"><div class="countdown-number" id="countdownNum_${link.id}">20</div><p class="text-gray-400 text-xs mt-1">seconds</p></div></div>
+                    <button id="unlockBtn_${link.id}" onclick="startUnlock('${link.id}')" class="action-btn w-full py-3 bg-blue-600 text-white rounded-xl font-medium text-sm mb-2"><i class="fas fa-forward mr-2"></i>Continue (${link.adsRequired-prog.adsCompleted} left)</button>
                     <div class="flex gap-2">
                         <button onclick="likeLink('${link.id}')" class="action-row-btn flex-1 ${isLiked?'bg-red-500/30 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isLiked?'fas':'far'} fa-heart"></i> ${link.likes||0}</button>
                         <button onclick="openCommentModal('${link.id}')" class="action-row-btn flex-1 bg-gray-700/50 text-blue-400"><i class="far fa-comment"></i> ${(link.comments&&link.comments.length)||0}</button>
                         <button onclick="toggleFavorite('${link.id}')" class="action-row-btn flex-1 ${isFav?'bg-red-500/20 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isFav?'fas':'far'} fa-bookmark"></i></button>
-                        <button onclick="shareLink('${link.targetUrl}')" class="action-row-btn flex-1 bg-gray-700/50 text-green-400"><i class="fas fa-share-alt"></i></button>
+                        <button onclick="shareBotLink('${link.id}')" class="action-row-btn flex-1 bg-gray-700/50 text-green-400"><i class="fas fa-share-alt"></i></button>
                     </div>
                 </div></div>`;
         }
@@ -438,7 +464,7 @@
                         <button onclick="likeLink('${link.id}')" class="action-row-btn flex-1 ${isLiked?'bg-red-500/30 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isLiked?'fas':'far'} fa-heart"></i> ${link.likes||0}</button>
                         <button onclick="openCommentModal('${link.id}')" class="action-row-btn flex-1 bg-gray-700/50 text-blue-400"><i class="far fa-comment"></i> ${(link.comments&&link.comments.length)||0}</button>
                         <button onclick="toggleFavorite('${link.id}')" class="action-row-btn flex-1 ${isFav?'bg-red-500/20 text-red-400':'bg-gray-700/50 text-gray-400'}"><i class="${isFav?'fas':'far'} fa-bookmark"></i></button>
-                        <button onclick="shareLink('${link.targetUrl}')" class="action-row-btn flex-1 bg-gray-700/50 text-green-400"><i class="fas fa-share-alt"></i></button>
+                        <button onclick="shareBotLink('${link.id}')" class="action-row-btn flex-1 bg-gray-700/50 text-green-400"><i class="fas fa-share-alt"></i></button>
                     </div>
                 </div></div>`;
         }
@@ -458,14 +484,48 @@
             renderAllTabs();
         }
         
-        function shareLink(url) { if (navigator.share) navigator.share({ url }); else { navigator.clipboard.writeText(url); alert('Link copied!'); } }
+        // 🔥 FIXED: Share = Bot link, not video link
+        function shareBotLink(linkId) {
+            const link = links.find(l => l.id === linkId);
+            if (!link) return;
+            const botLink = `https://t.me/${appSettings.botUsername.replace('@','')}?start=video_${linkId}`;
+            if (navigator.share) navigator.share({ url: botLink, title: link.title });
+            else { navigator.clipboard.writeText(botLink); alert('Bot link copied!'); }
+        }
+        
         function copyReferralLink() { if (!currentUser) return; const rl = `https://t.me/${appSettings.botUsername.replace('@','')}?start=${currentUser.id}`; navigator.clipboard.writeText(rl); alert('Referral link copied!'); }
         function addView(linkId) { if (!linkId) return; db.ref('links/'+linkId+'/views').set(firebase.database.ServerValue.increment(1)).catch(()=>{}); }
         
-        // 🔥 FIXED: Unlock with ad network
+        // 🔥 FIXED: Start countdown overlay + NO POPUP
+        function showCountdown(linkId, callback) {
+            const overlay = document.getElementById('countdownOverlay_' + linkId);
+            const btn = document.getElementById('unlockBtn_' + linkId);
+            const numEl = document.getElementById('countdownNum_' + linkId);
+            if (!overlay || !btn || !numEl) { if (callback) callback(); return; }
+            
+            btn.disabled = true;
+            btn.textContent = 'Please wait...';
+            overlay.classList.remove('hidden');
+            
+            let count = 20;
+            numEl.textContent = count;
+            
+            countdownInterval = setInterval(() => {
+                count--;
+                numEl.textContent = count;
+                if (count <= 0) {
+                    clearInterval(countdownInterval);
+                    overlay.classList.add('hidden');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-play mr-2"></i>Unlock Now';
+                    if (callback) callback();
+                }
+            }, 1000);
+        }
+        
         function startUnlock(linkId) {
             if (!currentUser) { alert('Login first!'); return; }
-            if (adTimerActive) { alert('Please wait!'); return; }
+            if (adTimerActive) return;
             const link = links.find(l => l.id === linkId);
             if (!link) return;
             addView(linkId);
@@ -476,15 +536,25 @@
             
             adTimerActive = true;
             const network = link.adNetwork || 'all';
-            alert(`📢 Ad ${prog.adsCompleted+1}/${prog.adsRequired}\nShowing ad (${network})...`);
             
+            // 🔥 Immediately run ad, no popup
             runAdByNetwork(network, () => {
                 prog.adsCompleted++;
                 db.ref('adProgress/'+currentUser.id+'/'+linkId).set(prog);
                 db.ref('users/'+currentUser.id+'/adsWatched').set(firebase.database.ServerValue.increment(1));
-                adTimerActive = false;
-                if (prog.adsCompleted >= prog.adsRequired) { prog.completed = true; db.ref('adProgress/'+currentUser.id+'/'+linkId).set(prog); unlockLink(link); }
-                else { alert(`✅ Done! ${prog.adsRequired-prog.adsCompleted} more needed.`); renderAllTabs(); }
+                
+                if (prog.adsCompleted >= prog.adsRequired) {
+                    prog.completed = true;
+                    db.ref('adProgress/'+currentUser.id+'/'+linkId).set(prog);
+                    adTimerActive = false;
+                    unlockLink(link);
+                } else {
+                    // 🔥 Show 20 second countdown on button
+                    showCountdown(linkId, () => {
+                        adTimerActive = false;
+                        renderAllTabs();
+                    });
+                }
             });
         }
         
@@ -500,13 +570,11 @@
         function openLink(url) { if (window.Telegram && Telegram.WebApp) Telegram.WebApp.openLink(url); else window.open(url, '_blank'); }
         function closeSuccessModal() { document.getElementById('successModal').classList.add('hidden'); }
         
-        // 🔥 FIXED: Comments - realtime load + count
         function openCommentModal(linkId) { if (!currentUser) { alert('Login!'); return; } currentCommentLinkId = linkId; document.getElementById('commentInput').value = ''; loadComments(linkId); document.getElementById('commentModal').classList.remove('hidden'); }
         function closeCommentModal() { document.getElementById('commentModal').classList.add('hidden'); currentCommentLinkId = null; }
         function loadComments(linkId) { db.ref('links/'+linkId+'/comments').once('value').then(s => { const comments = s.val() || []; const c = document.getElementById('commentsList'); if (!comments.length) { c.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">No comments yet.</p>'; return; } c.innerHTML = comments.slice().reverse().map(cm => `<div class="bg-gray-800 p-3 rounded-xl"><div class="flex items-center gap-2 mb-1"><img src="${cm.userPicture||'https://ui-avatars.com/api/?name=U'}" class="w-6 h-6 rounded-full"><span class="text-white text-sm font-medium">${cm.userName||'User'}</span><span class="text-gray-500 text-xs">${cm.time||''}</span></div><p class="text-gray-300 text-sm">${cm.text}</p></div>`).join(''); }); }
         function submitComment() { if (!currentUser || !currentCommentLinkId) return; const text = document.getElementById('commentInput').value.trim(); if (!text) return; const cm = { text, userName: currentUser.name, userPicture: currentUser.picture, userId: currentUser.id, time: new Date().toLocaleString() }; db.ref('links/'+currentCommentLinkId+'/comments').once('value').then(s => { const comments = s.val() || []; comments.push(cm); db.ref('links/'+currentCommentLinkId+'/comments').set(comments).then(() => { document.getElementById('commentInput').value = ''; loadComments(currentCommentLinkId); renderAllTabs(); }); const link = links.find(l => l.id === currentCommentLinkId); const notif = { id: 'notif_'+Date.now(), message: `💬 ${currentUser.name} commented on "${link?.title||'a video'}"`, time: new Date().toLocaleString(), read: false }; notifications.push(notif); db.ref('notifications').set(notifications); }); }
         
-        // 🔥 Post Creation
         function submitUserPost(e) {
             e.preventDefault();
             if (!currentUser) { alert('Login!'); return; }
@@ -515,7 +583,6 @@
             db.ref('userPosts').once('value').then(s => { const posts = s.val() || []; const arr = Array.isArray(posts) ? posts : Object.values(posts); arr.push(post); db.ref('userPosts').set(arr).then(() => { alert('Post submitted!'); document.getElementById('createPostForm').reset(); switchUserTab('profile'); }); });
         }
         
-        // 🔥 Edit Post
         function editMyPost(postId) {
             const post = myPosts.find(p => p.id === postId);
             if (!post) return;
@@ -549,7 +616,6 @@
             c.innerHTML = myPosts.map(p => `<div class="bg-gray-800 rounded-xl overflow-hidden"><img src="${p.imageUrl}" class="post-thumb" onerror="this.src='https://placehold.co/300x200/333/666?text=No'"><div class="p-2"><p class="text-white text-xs font-medium truncate">${p.title}</p><div class="flex items-center justify-between mt-1"><span class="px-2 py-0.5 rounded text-xs ${p.status==='confirmed'?'bg-green-500/20 text-green-400':p.status==='rejected'?'bg-red-500/20 text-red-400':'bg-yellow-500/20 text-yellow-400'}">${p.status}</span><button onclick="editMyPost('${p.id}')" class="text-blue-400 text-xs"><i class="fas fa-edit"></i></button></div></div></div>`).join('');
         }
         
-        // 🔥 User Profile View
         function viewUserProfile(userId) {
             if (!currentUser) return;
             viewedUserId = userId;
@@ -569,33 +635,19 @@
             document.getElementById('followBtn').classList.toggle('bg-green-600', isFollowing);
             document.getElementById('followBtn').classList.toggle('bg-blue-600', !isFollowing);
             
-            db.ref('userPosts').once('value').then(s => {
-                const allPosts = s.val() || {}; const posts = Array.isArray(allPosts) ? allPosts : Object.values(allPosts);
-                const userPosts = posts.filter(p => p.userId === userId && p.status === 'confirmed');
+            // 🔥 FIXED: Show admin's posts too
+            db.ref('links').once('value').then(s => {
+                const allLinks = s.val() || {}; const linkArr = Array.isArray(allLinks) ? allLinks : Object.values(allLinks);
+                const userLinks = linkArr.filter(l => l.postedBy === userId || (isAdminUser && l.postedByIsAdmin));
                 const pc = document.getElementById('viewedUserPostsContainer');
-                if (!userPosts.length) { pc.innerHTML = '<p class="text-gray-500 text-center py-4">No posts yet</p>'; return; }
-                pc.innerHTML = userPosts.map(p => `<div class="bg-gray-800 rounded-xl overflow-hidden p-3 cursor-pointer" onclick="findAndUnlockPost('${p.id}')"><div class="flex gap-3"><img src="${p.imageUrl}" class="w-16 h-16 rounded-lg object-cover" onerror="this.src='https://placehold.co/64/333/666'"><div><p class="text-white text-sm font-medium">${p.title}</p><p class="text-gray-500 text-xs">${p.category} | ${p.adsRequired} ads</p></div></div></div>`).join('');
+                const displayLinks = userLinks.slice(0, 10);
+                if (!displayLinks.length) { pc.innerHTML = '<p class="text-gray-500 text-center py-4">No posts yet</p>'; return; }
+                pc.innerHTML = displayLinks.map(l => `<div class="bg-gray-800 rounded-xl overflow-hidden p-3 cursor-pointer" onclick="closeUserProfileView();setTimeout(()=>startUnlock('${l.id}'),300)"><div class="flex gap-3"><img src="${l.imageUrl}" class="w-16 h-16 rounded-lg object-cover" onerror="this.src='https://placehold.co/64/333/666'"><div><p class="text-white text-sm font-medium">${l.title}</p><p class="text-gray-500 text-xs">${l.category} | ${l.adsRequired} ads</p></div></div></div>`).join('');
             });
             
             ['homeSection','favoritesSection','unlockedSection','tutorialSection','profileSection','createPostSection','editPostSection'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('userProfileViewSection').classList.remove('hidden');
             document.getElementById('categoryContainer').classList.add('hidden');
-        }
-        
-        function findAndUnlockPost(postId) {
-            db.ref('userPosts').once('value').then(s => {
-                const allPosts = s.val() || {}; const posts = Array.isArray(allPosts) ? allPosts : Object.values(allPosts);
-                const post = posts.find(p => p.id === postId);
-                if (post && post.confirmedLinkId) {
-                    const link = links.find(l => l.id === post.confirmedLinkId);
-                    if (link) { closeUserProfileView(); setTimeout(() => startUnlock(link.id), 300); return; }
-                }
-                if (post && post.targetUrl) {
-                    const link = links.find(l => l.targetUrl === post.targetUrl && l.postedBy === post.userId);
-                    if (link) { closeUserProfileView(); setTimeout(() => startUnlock(link.id), 300); return; }
-                }
-                alert('This post is pending confirmation.');
-            });
         }
         
         function toggleFollowUser() { if (!currentUser || !viewedUserId || viewedUserId === currentUser.id) return; if (followedUsers[viewedUserId]) { delete followedUsers[viewedUserId]; db.ref('users/'+viewedUserId+'/followers').set(firebase.database.ServerValue.increment(-1)); } else { followedUsers[viewedUserId] = true; db.ref('users/'+viewedUserId+'/followers').set(firebase.database.ServerValue.increment(1)); } db.ref('followedUsers/'+currentUser.id).set(followedUsers); viewUserProfile(viewedUserId); }
@@ -630,12 +682,12 @@
         
         window.startUnlock = startUnlock; window.openLink = openLink; window.closeSuccessModal = closeSuccessModal;
         window.switchAuthMode = switchAuthMode; window.signUpWithEmail = signUpWithEmail; window.loginWithEmail = loginWithEmail;
-        window.signInWithGoogle = signInWithGoogle; window.logout = logout; window.likeLink = likeLink; window.shareLink = shareLink;
+        window.signInWithGoogle = signInWithGoogle; window.logout = logout; window.likeLink = likeLink; window.shareBotLink = shareBotLink;
         window.switchUserTab = switchUserTab; window.toggleFavorite = toggleFavorite; window.playTutorialVideo = playTutorialVideo;
         window.copyReferralLink = copyReferralLink; window.showNotifications = showNotifications; window.closeNotifications = closeNotifications;
         window.openCommentModal = openCommentModal; window.closeCommentModal = closeCommentModal; window.submitComment = submitComment;
         window.viewUserProfile = viewUserProfile; window.closeUserProfileView = closeUserProfileView; window.toggleFollowUser = toggleFollowUser;
-        window.editMyPost = editMyPost; window.findAndUnlockPost = findAndUnlockPost;
+        window.editMyPost = editMyPost;
     </script>
 </body>
 </html>
